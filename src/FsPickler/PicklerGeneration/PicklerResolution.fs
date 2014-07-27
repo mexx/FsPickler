@@ -2,23 +2,37 @@
 
     open System
     open System.Collections.Generic
-    open System.Runtime.CompilerServices
 
     open Nessos.FsPickler
     open Nessos.FsPickler.Reflection
     open Nessos.FsPickler.TypeShape
     open Nessos.FsPickler.PicklerFactory
 
+    type PicklerStack () =
+        let types = new Stack<Type> ()
+        let picklers = new Dictionary<Type, Pickler>()
+
+        member __.Push (p : Pickler) =
+            types.Push p.Type
+            picklers.Add (p.Type, p)
+
+        member __.Pop () =
+            let t = types.Pop()
+            let p = picklers.TryFind t
+            picklers.Remove t |> ignore
+            p
+
+        member __.TryFind(t : Type) = picklers.TryFind t
+        member __.Types = Seq.toArray types
+            
+
     /// resolves a suitable pickler implementation for given type
     let resolvePickler (resolver : IPicklerResolver) (factory : PicklerFactory) 
-                        (registerUninitializedPickler : Pickler -> unit) (t : Type) =
+                        (stack : PicklerStack) (t : Type) =
 
         try
-            // while stack overflows are unlikely here (this is type-level traversal)
-            // it can be useful in catching a certain class of user errors when declaring custom picklers.
-            try RuntimeHelpers.EnsureSufficientExecutionStack ()
-            with :? InsufficientExecutionStackException ->
-                raise <| new PicklerGenerationException(t, "insufficient execution stack.")
+            if stack.Types |> Array.exists ((=) t) then
+                raise <| new PicklerGenerationException(t, "Detected invalid type recursion pattern.")
 
             // step 1: resolve shape of given type
             let shape = 
@@ -27,7 +41,7 @@
 
             // step 2: create an uninitialized pickler instance and register to the local cache
             let p0 = UninitializedPickler.Create shape
-            do registerUninitializedPickler p0
+            stack.Push p0
 
             // step 3: subtype pickler resolution
             let result =
@@ -43,6 +57,8 @@
                 match result with
                 | Some r -> r
                 | None -> shape.Accept factory
+
+            let _ = stack.Pop()
 
             // step 5: pickler generation complete, copy data to uninitialized binding and return it
             p0.Unpack
@@ -75,7 +91,7 @@
 
         // a temporary local cache is used to store early, unitialized instances
         // this keeps the global cache from being contaminated with partial state
-        let localCache = new Dictionary<Type, Exn<Pickler>> ()
+        let stack = new PicklerStack()
 
         let rec resolver = 
             {
@@ -93,10 +109,10 @@
             match globalCache.Lookup t with
             | Some r -> r
             | None ->
-                match localCache.TryFind t with
-                | Some r -> r
+                match stack.TryFind t with
+                | Some r -> Success r
                 | None ->
-                    let p = resolvePickler resolver factory (fun p -> localCache.Add(p.Type, Success p)) t
+                    let p = resolvePickler resolver factory stack t
                     globalCache.Commit t p
 
         resolve t
