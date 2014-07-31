@@ -14,6 +14,8 @@
 
         override p.ImplementationType = typeof<'T>
         override p.PicklerInfo = PicklerInfo.Primitive
+        override p.IsRecursiveType = false
+        override p.IsOfFixedSize = true
         override p.IsCacheByRef = false
         override p.UseWithSubtypes = false
 
@@ -114,12 +116,16 @@
     type StringPickler () =
         inherit PrimitivePickler<string> ()
 
+        override __.IsOfFixedSize = false
+
         override __.Write (writer : WriteState) (tag : string) (s : string) = writer.Formatter.WriteString tag s
         override __.Read (reader : ReadState) (tag : string) = reader.Formatter.ReadString tag
 
     [<AutoSerializable(false)>]
     type ByteArrayPickler () =
         inherit PrimitivePickler<byte []> ()
+
+        override __.IsOfFixedSize = false
 
         override __.Write (writer : WriteState) (tag : string) (bytes : byte []) = writer.Formatter.WriteBytes tag bytes
         override __.Read (reader : ReadState) (tag : string) = reader.Formatter.ReadBytes tag
@@ -157,6 +163,8 @@
     [<AutoSerializable(false)>]
     type BigIntPickler () =
         inherit PrimitivePickler<bigint> ()
+
+        override __.IsOfFixedSize = false
 
         override __.Write (writer : WriteState) (tag : string) (bint : bigint) =
             writer.Formatter.WriteBigInteger tag bint

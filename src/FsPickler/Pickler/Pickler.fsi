@@ -23,10 +23,10 @@
             abstract member IsCacheByRef : bool
 
             /// Specifies if instances of this pickler type are of fixed size.
-            member IsOfFixedSize : bool
+            abstract member IsOfFixedSize : bool
 
             /// Specifies if instances of this pickler type can be cyclic objects.
-            member IsRecursiveType : bool
+            abstract member IsRecursiveType : bool
 
             /// Pickler type classification
             member TypeKind : TypeKind

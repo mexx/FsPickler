@@ -32,7 +32,10 @@
         val mutable private m_PicklerInfo : PicklerInfo
 
         val mutable private m_IsCacheByRef : bool
+        val mutable private m_IsRecursive : bool
+        val mutable private m_IsOfFixedSize : bool
         val mutable private m_UseWithSubtypes : bool
+
         val mutable private m_SkipHeaderWrite : bool
         val mutable private m_Bypass : bool
         val mutable private m_SkipVisit : bool
@@ -51,6 +54,9 @@
                 m_PicklerInfo = picklerInfo
 
                 m_IsCacheByRef = cacheByRef
+                m_IsOfFixedSize = false
+                m_IsRecursive = false
+
                 m_UseWithSubtypes = defaultArg useWithSubtypes false
                 m_SkipHeaderWrite = defaultArg skipHeaderWrite false
                 m_Bypass = defaultArg bypass false
@@ -88,6 +94,9 @@
 
                 m_PicklerInfo = Unchecked.defaultof<_>
                 m_IsCacheByRef = Unchecked.defaultof<_>
+                m_IsOfFixedSize = Unchecked.defaultof<_>
+                m_IsRecursive = Unchecked.defaultof<_>
+
                 m_UseWithSubtypes = Unchecked.defaultof<_>
                 m_SkipHeaderWrite = Unchecked.defaultof<_>
                 m_Bypass = Unchecked.defaultof<_>
@@ -100,8 +109,13 @@
             | Some p -> p.Type
 
         override p.PicklerInfo = p.m_PicklerInfo
+        override p.IsRecursiveType = p.m_IsRecursive
+        override p.IsOfFixedSize = p.m_IsOfFixedSize
         override p.IsCacheByRef = p.m_IsCacheByRef
         override p.UseWithSubtypes = p.m_UseWithSubtypes
+
+        member internal p.SetIsRecursiveType b = p.m_IsRecursive <- b
+        member internal p.SetIsOfFixedSize b = p.m_IsOfFixedSize <- b
 
         override p.Cast<'S> () =
             match p.m_NestedPickler with
@@ -131,6 +145,8 @@
                     p.m_PicklerInfo <- p'.m_PicklerInfo
                     p.m_IsCacheByRef <- p'.m_IsCacheByRef
                     p.m_UseWithSubtypes <- p'.m_UseWithSubtypes
+                    p.m_IsOfFixedSize <- p'.m_IsOfFixedSize
+                    p.m_IsRecursive <- p'.m_IsRecursive
                     p.m_Writer <- p'.m_Writer
                     p.m_Reader <- p'.m_Reader
                     p.m_NestedPickler <- p'.m_NestedPickler
@@ -185,14 +201,14 @@
 
                 if isProperSubtype then () else
 
-                if p.m_IsCacheByRef || p.IsRecursiveType then
+                if p.m_IsCacheByRef || p.m_IsRecursive then
                     let id, firstOccurence = state.ObjectIdGenerator.GetId value
 
                     let cyclicObjects = state.CyclicObjectSet
                     let objStack = state.ObjectStack
 
                     if firstOccurence then
-                        if p.IsRecursiveType then 
+                        if p.m_IsRecursive then 
                             // push id to the symbolic stack to detect cyclic objects during traversal
                             objStack.Push id
 
@@ -213,7 +229,7 @@
                                 p.m_Writer state tag value
                                 formatter.EndWriteObject ()
 
-                    elif p.IsRecursiveType && p.TypeKind <> TypeKind.Array && objStack.Contains id && not <| cyclicObjects.Contains id then
+                    elif p.m_IsRecursive && p.TypeKind <> TypeKind.Array && objStack.Contains id && not <| cyclicObjects.Contains id then
                         // came across cyclic object, record fixup-related data
                         // cyclic objects are handled once per instance
                         // instances of cyclic arrays are handled differently than other reference types
@@ -275,7 +291,7 @@
                     formatter.EndReadObject ()
                     state.ObjectCache.[id] |> fastUnbox<'T>
 
-                elif p.m_IsCacheByRef || p.IsRecursiveType then
+                elif p.m_IsCacheByRef || p.m_IsRecursive then
 
                     let id = state.NextObjectId()
                     let value = p.m_Reader state tag
@@ -287,7 +303,7 @@
                         // solve this ambiguity by forcing an update here.
                         state.ObjectCache.[id] <- value ; value
 
-                    elif p.IsRecursiveType then
+                    elif p.m_IsRecursive then
                         let found, cachedInstance = state.ObjectCache.TryGetValue id
 
                         if found then

@@ -14,23 +14,25 @@
     type Pickler internal (t : Type) =
 
         let typeKind = TypeKind.compute t
-        let isFixedSize = isOfFixedSize t
-        let isRecursive =
-#if OPTIMIZE_FSHARP
-            isRecursiveType true t
-#else
-            isRecursiveType false self.Type
-#endif
+//        let isFixedSize = isOfFixedSize t
+//        let isRecursive =
+//#if OPTIMIZE_FSHARP
+//            isRecursiveType true t
+//#else
+//            isRecursiveType false self.Type
+//#endif
 
         member __.Type = t
         member __.TypeKind = typeKind
-        member __.IsOfFixedSize = isFixedSize
-        member __.IsRecursiveType = isRecursive
+//        member __.IsOfFixedSize = isFixedSize
+//        member __.IsRecursiveType = isRecursive
 
         abstract ImplementationType : Type
 
         abstract PicklerInfo : PicklerInfo
         abstract IsCacheByRef : bool
+        abstract IsOfFixedSize : bool
+        abstract IsRecursiveType : bool
         abstract UseWithSubtypes : bool
 
         abstract UntypedWrite : state:WriteState -> tag:string -> value:obj -> unit

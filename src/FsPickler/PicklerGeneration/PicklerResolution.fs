@@ -5,11 +5,13 @@
 
     open Nessos.FsPickler
     open Nessos.FsPickler.Reflection
+    open Nessos.FsPickler.Zipper
     open Nessos.FsPickler.TypeShape
     open Nessos.FsPickler.PicklerFactory
 
+
     type PicklerStack () =
-        let types = new Stack<Type> ()
+        let types = new StackZipper<Type> ()
         let picklers = new Dictionary<Type, Pickler>()
 
         member __.Push (p : Pickler) =
@@ -17,13 +19,13 @@
             picklers.Add (p.Type, p)
 
         member __.Pop () =
-            let t = types.Pop()
+            let t,tree = types.Pop()
             let p = picklers.TryFind t
             picklers.Remove t |> ignore
-            p
+            t, tree
 
         member __.TryFind(t : Type) = picklers.TryFind t
-        member __.Types = Seq.toArray types
+        member __.Types = types.Stack
             
 
     /// resolves a suitable pickler implementation for given type
@@ -31,7 +33,7 @@
                         (stack : PicklerStack) (t : Type) =
 
         try
-            if stack.Types |> Array.exists ((=) t) then
+            if stack.Types |> List.exists ((=) t) then
                 raise <| new PicklerGenerationException(t, "Detected invalid type recursion pattern.")
 
             // step 1: resolve shape of given type
@@ -58,7 +60,7 @@
                 | Some r -> r
                 | None -> shape.Accept factory
 
-            let _ = stack.Pop()
+            let _, tree = stack.Pop()
 
             // step 5: pickler generation complete, copy data to uninitialized binding and return it
             p0.Unpack
