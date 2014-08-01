@@ -89,11 +89,11 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Utils\Utils.fs" />
+    <Compile Include="Utils\Zipper.fs" />
     <Compile Include="Utils\Emit.fs" />
     <Compile Include="Utils\Reflection.fs" />
     <Compile Include="Utils\ShallowCopy.fs" />
     <Compile Include="Utils\Hashing.fs" />
-    <Compile Include="Utils\Zipper.fs" />
     <Compile Include="Pickler\Types.fs" />
     <Compile Include="Pickler\PickleFormat.fs" />
     <Compile Include="Pickler\ReflectionCache.fs" />

@@ -34,13 +34,11 @@
     type TypeShape internal () =
         abstract Type : Type
         abstract Shape : Shape
-        abstract Accept : ITypeVisitor<'R> -> 'R
         abstract Accept : ITypeShapeVisitor<'R> -> 'R
 
     and [<AbstractClass>] TypeShape<'T> internal () =
         inherit TypeShape()
         override __.Type = typeof<'T>
-        override __.Accept (v : ITypeVisitor<'R>) = v.Visit<'T>()
 
     and ShapeAbstract<'T> internal () =
         inherit TypeShape<'T> ()
@@ -230,9 +228,6 @@
         inherit TypeShape<Choice<'T1,'T2,'T3,'T4,'T5,'T6,'T7>> ()
         override __.Shape = Shape.FSharpType
         override __.Accept (v : ITypeShapeVisitor<'R>) = v.Choice<'T1,'T2,'T3,'T4,'T5,'T6,'T7> ()
-
-    and ITypeVisitor<'R> =
-        abstract Visit<'T> : unit -> 'R
 
     and ITypeShapeVisitor<'R> =
         abstract Primitive<'T> : unit -> 'R

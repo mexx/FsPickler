@@ -3,13 +3,37 @@
     // Functional Zipper implementation
 
     type Tree<'T> =
-        | Branch of 'T * Tree<'T> list
+        {
+            Value : 'T
+            Children : Tree<'T> list
+        }
 
     type Context<'T> =
         | Top
         | Node of Tree<'T> list * 'T * Context<'T> * Tree<'T> list
 
     type Zipper<'T> = Context<'T> * Tree<'T>
+
+
+    [<RequireQualifiedAccess>]
+    module Tree =
+        
+        let exists (f : int -> 'T -> bool) (tree : Tree<'T>) =
+            let rec aux depth (t : Tree<'T>) =
+                if f depth t.Value then true
+                else
+                    List.exists (aux (depth + 1)) t.Children
+
+            aux 0 tree
+
+        let forall (f : int -> 'T -> bool) (tree : Tree<'T>) =
+            let rec aux depth (t : Tree<'T>) =
+                if f depth t.Value then 
+                    List.forall (aux (depth + 1)) t.Children
+                else
+                    false
+
+            aux 0 tree
 
     [<RequireQualifiedAccess>]
     module Zipper =
@@ -19,13 +43,13 @@
         let up ((ctx,tree) : Zipper<'T>) : Zipper<'T> =
             match ctx with
             | Top -> invalidOp "cannot zip further up."
-            | Node(left, t, ctx', right) -> ctx', Branch (t, left @ tree :: right)
+            | Node(left, t, ctx', right) -> ctx', { Value = t ; Children = left @ tree :: right }
 
         let down i ((ctx,tree) : Zipper<'T>) : Zipper<'T> =
             match tree with
-            | Branch (_,[]) -> invalidOp "cannot unzip further down."
-            | Branch (_,cs) when i >= cs.Length -> raise <| new System.IndexOutOfRangeException()
-            | Branch (t,cs) ->
+            | { Children = [] } -> invalidOp "cannot unzip further down."
+            | { Children = cs } when i >= cs.Length -> raise <| new System.IndexOutOfRangeException()
+            | { Value = t ; Children = cs } ->
                 let left = Seq.take i cs |> Seq.toList
                 let c = cs.[i]
                 let right = Seq.skip (i+1) cs |> Seq.toList
@@ -49,13 +73,13 @@
                 match context with
                 | Top -> failwith "impossible"
                 | Node(_, _, Top, children) ->
-                    let tr = Branch(t, children)
+                    let tr = { Value = t ; Children = children }
                     stack <- tail
                     context <- Top
                     t, tr
 
                 | Node(_, _, Node(_, t', ctx, siblings), children) ->
-                    let tr = Branch(t, children)
+                    let tr = { Value = t ; Children = children }
                     stack <- tail
                     context <- Node([], t', ctx, tr :: siblings)
                     t, tr

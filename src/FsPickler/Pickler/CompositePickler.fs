@@ -341,5 +341,15 @@
             new CompositePickler<'T>(reader, writer, picklerInfo, cacheByRef = cacheByRef, ?useWithSubtypes = useWithSubtypes, 
                                                         ?skipHeaderWrite = skipHeaderWrite, ?bypass = bypass, ?skipVisit = skipVisit) :> Pickler<'T>
 
+        /// <summary>
+        ///     Creates an uninitialized composite pickler instance for given type.
+        /// </summary>
+        static member CreateUninitialized(t : Type) =
+            let e = Existential.Create t
+            e.Apply {
+                new IFunc<Pickler> with
+                    member __.Invoke<'T> () = new CompositePickler<'T> () :> Pickler
+            }
+
         static member ObjectPickler =
             CompositePickler.Create<obj>((fun _ _ -> obj ()), (fun _ _ _ -> ()), PicklerInfo.Object, cacheByRef = true)

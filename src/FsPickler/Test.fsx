@@ -18,3 +18,13 @@ let xp' = Xml.pickle fPickler (fun x -> x + 1)
 
 Binary.unpickle fPickler bp' 41
 Xml.unpickle fPickler xp' 41
+
+type CyclicClass () as self =
+    let s = Some (self, 42)
+    let t = Choice1Of2 self
+    member x.Value = s
+    member x.Value' = t
+
+let p = Pickler.auto<CyclicClass>
+
+p.IsRecursiveType
