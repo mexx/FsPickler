@@ -352,4 +352,7 @@
             }
 
         static member ObjectPickler =
-            CompositePickler.Create<obj>((fun _ _ -> obj ()), (fun _ _ _ -> ()), PicklerInfo.Object, cacheByRef = true)
+            let cp = new CompositePickler<obj>((fun _ _ -> obj ()), (fun _ _ _ -> ()), PicklerInfo.Object, cacheByRef = true)
+            cp.SetIsOfFixedSize false
+            cp.SetIsRecursiveType true
+            cp :> Pickler<obj>

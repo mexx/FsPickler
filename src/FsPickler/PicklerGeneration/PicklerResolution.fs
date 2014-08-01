@@ -1,6 +1,7 @@
 ﻿module internal Nessos.FsPickler.PicklerResolution
 
     open System
+    open System.Reflection
     open System.Collections.Generic
 
     open Nessos.FsPickler
@@ -12,6 +13,8 @@
     let isRecursivePickler (structure : Tree<Pickler>) =
         let root = structure.Value
 
+        if typeof<MemberInfo>.IsAssignableFrom root.Type then false else
+
         let checkNode depth (p : Pickler) =
             if not p.Type.IsSealed || isISerializable p.Type then true
             else
@@ -21,6 +24,7 @@
 
     let isOfFixedSize (structure : Tree<Pickler>) =
         if isRecursivePickler structure then false
+        elif structure.Value.Type.IsArray then false
         else
             structure.Children |> List.forall (fun ch -> ch.Value.IsOfFixedSize)
             
@@ -130,7 +134,11 @@
                                 new IPicklerUnpacker<bool> with
                                     member __.Apply<'T> (p : Pickler<'T>) =
                                         match p with
-                                        | :? CompositePickler<'T> as p -> p.InitializeFrom generatedPickler ; true
+                                        | :? CompositePickler<'T> as p -> 
+                                            p.InitializeFrom generatedPickler ; 
+                                            p.SetIsOfFixedSize isFixed
+                                            p.SetIsRecursiveType isRec
+                                            true
                                         | _ -> 
                                             let msg = sprintf "Unexpected pickler implementation '%O'" <| p.GetType()
                                             raise <| new PicklerGenerationException(p.Type, msg)
