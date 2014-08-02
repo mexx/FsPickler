@@ -253,22 +253,22 @@ Target "ReleaseDocs" (fun _ ->
     Branches.push tempDocsDir
 )
 
-Target "Release" DoNothing
 
 // --------------------------------------------------------------------------------------
 // Run all targets by default. Invoke 'build <Target>' to override
 
+Target "Default" DoNothing
 Target "Prepare" DoNothing
 Target "PrepareRelease" DoNothing
-Target "All" DoNothing
+Target "Release" DoNothing
 
 "Clean"
   ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Prepare"
   ==> "Build"
-//  ==> "RunTests"
-  ==> "All"
+  ==> "RunTests"
+  ==> "Default"
 
 "All"
   ==> "PrepareRelease"
@@ -280,5 +280,5 @@ Target "All" DoNothing
   ==> "NuGet -- FsPickler.CSharp"
   ==> "Release"
 
-RunTargetOrDefault "Release"
-//RunTargetOrDefault "All"
+RunTargetOrDefault "Default"
+//RunTargetOrDefault "Release"
