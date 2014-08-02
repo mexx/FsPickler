@@ -270,7 +270,7 @@ Target "Release" DoNothing
   ==> "RunTests"
   ==> "Default"
 
-"All"
+"Default"
   ==> "PrepareRelease"
   ==> "Build - NET40"
   ==> "GenerateDocs"
