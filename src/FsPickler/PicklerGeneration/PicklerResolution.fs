@@ -118,10 +118,15 @@
 
                 | None ->
                     try
-                        let p0 = CompositePickler.CreateUninitialized t
+                        // step 2: generate pickler using the pickler factory
+                        let shape = 
+                            try TypeShape.resolve t
+                            with UnSupportedShape -> raise <| NonSerializableTypeException(t)
+
+                        let p0 = shape.Accept { new ITypeVisitor<Pickler> with member __.Visit<'T> () = new CompositePickler<'T> () :> Pickler }
                         do stack.Push p0
 
-                        let generatedPickler = buildPickler resolver t
+                        let generatedPickler = buildPickler resolver shape
 
                         let _,tree = stack.Pop ()
 

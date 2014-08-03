@@ -67,12 +67,12 @@
 
 
     /// generates a pickler implementation for given type ; IPicklerResolver argument encodes recursive calls
-    let buildPickler (resolver : IPicklerResolver) (t : Type) =
+    let buildPickler (resolver : IPicklerResolver) (shape : TypeShape) =
 
         // step 1: perform subtype resolution
         let result =
-            if t.BaseType <> null then
-                match resolver.Resolve t.BaseType with
+            if shape.Type.BaseType <> null then
+                match resolver.Resolve shape.Type.BaseType with
                 | p when p.UseWithSubtypes -> Some p
                 | _ -> None
             else
@@ -82,9 +82,6 @@
         | Some pickler -> pickler
         | None ->
             // step 2: generate pickler using the pickler factory
-            let shape = 
-                try TypeShape.resolve t
-                with UnSupportedShape -> raise <| NonSerializableTypeException(t)
 
             let factory = new PicklerFactory(resolver)
             shape.Accept factory
