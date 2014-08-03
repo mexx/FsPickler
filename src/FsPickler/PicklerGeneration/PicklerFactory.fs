@@ -12,6 +12,18 @@
     open Nessos.FsPickler
     open Nessos.FsPickler.TypeShape
 
+    /// Creates a blank pickler instance for early recursive binding
+
+    type UninitializedPickler private () =
+
+        static let visitor =
+            {
+                new ITypeVisitor<Pickler> with
+                    member __.Visit<'T> () = new CompositePickler<'T> () :> Pickler
+            }
+
+        static member Create(shape : TypeShape) = shape.Accept visitor
+
     /// Implements a pickler factory type visitor
 
     type PicklerFactory (resolver : IPicklerResolver) =
@@ -66,22 +78,19 @@
             member __.Choice<'T1,'T2,'T3,'T4,'T5,'T6,'T7> () = FsUnionPickler.Create<Choice<'T1,'T2,'T3,'T4,'T5,'T6,'T7>> resolver :> Pickler
 
 
-    /// generates a pickler implementation for given type ; IPicklerResolver argument encodes recursive calls
-    let buildPickler (resolver : IPicklerResolver) (shape : TypeShape) =
+        static member Create (resolver : IPicklerResolver) (shape : TypeShape) =
+            // perform subtype resolution if needed
+            let result =
+                if shape.Type.BaseType <> null then
+                    match resolver.Resolve shape.Type.BaseType with
+                    | p when p.UseWithSubtypes -> Some p
+                    | _ -> None
+                else
+                    None
 
-        // step 1: perform subtype resolution
-        let result =
-            if shape.Type.BaseType <> null then
-                match resolver.Resolve shape.Type.BaseType with
-                | p when p.UseWithSubtypes -> Some p
-                | _ -> None
-            else
-                None
-
-        match result with
-        | Some pickler -> pickler
-        | None ->
-            // step 2: generate pickler using the pickler factory
-
-            let factory = new PicklerFactory(resolver)
-            shape.Accept factory
+            // generate pickler using the pickler factory
+            match result with
+            | Some pickler -> pickler
+            | None ->
+                let factory = new PicklerFactory(resolver)
+                shape.Accept factory

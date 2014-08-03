@@ -18,7 +18,7 @@
     open Nessos.FsPickler.Reflection
 
     [<AutoSerializable(false)>]
-    type internal CompositePickler<'T> =
+    type private CompositePickler<'T> =
         inherit Pickler<'T>
 
         val mutable private m_IsInitialized : bool
@@ -40,7 +40,8 @@
         val mutable private m_Bypass : bool
         val mutable private m_SkipVisit : bool
 
-        private new (reader, writer, nested : Pickler option, picklerInfo, cacheByRef, ?useWithSubtypes, ?skipHeaderWrite, ?bypass, ?skipVisit) =
+        private new (reader, writer, nested : Pickler option, picklerInfo, cacheByRef, 
+                                    ?useWithSubtypes, ?skipHeaderWrite, ?bypass, ?skipVisit) =
             {
                 inherit Pickler<'T> ()
 
@@ -76,7 +77,7 @@
         /// <param name="skipVisit">do not apply visitor to instances if specified.</param>
         new (reader, writer, picklerInfo, cacheByRef, ?useWithSubtypes, ?skipHeaderWrite, ?bypass, ?skipVisit) =
             new CompositePickler<'T>(reader, writer, None, picklerInfo, cacheByRef, ?useWithSubtypes = useWithSubtypes, 
-                                                        ?skipHeaderWrite = skipHeaderWrite, ?bypass = bypass, ?skipVisit = skipVisit)
+                                            ?skipHeaderWrite = skipHeaderWrite, ?bypass = bypass, ?skipVisit = skipVisit)
 
         /// <summary>
         ///     Uninitialized pickler constructor
@@ -114,9 +115,6 @@
         override p.IsCacheByRef = p.m_IsCacheByRef
         override p.UseWithSubtypes = p.m_UseWithSubtypes
 
-        member internal p.SetIsRecursiveType b = p.m_IsRecursive <- b
-        member internal p.SetIsOfFixedSize b = p.m_IsOfFixedSize <- b
-
         override p.Cast<'S> () =
             match p.m_NestedPickler with
             | Some nested -> nested.Cast<'S> ()
@@ -134,26 +132,26 @@
                     raise <| new InvalidCastException(msg)
 
         /// Pickler initialization code
-        member internal p.InitializeFrom(p' : Pickler) : unit =
+        member internal p.InitializeFrom(p' : Pickler, isRecursive, isOfFixedSize) : unit =
             match p'.Cast<'T> () with
             | :? CompositePickler<'T> as p' ->
                 if p.m_IsInitialized then
-                    invalidOp "target pickler has already been initialized."
+                    raise <| new PicklerGenerationException(p.Type, "target pickler has already been initialized.")
                 elif not p'.m_IsInitialized then 
                     raise <| new PicklerGenerationException(p.Type, "source pickler has not been initialized.")
                 else
+                    p.m_IsInitialized <- true
+                    p.m_IsOfFixedSize <- isOfFixedSize
+                    p.m_IsRecursive <- isRecursive
                     p.m_PicklerInfo <- p'.m_PicklerInfo
                     p.m_IsCacheByRef <- p'.m_IsCacheByRef
                     p.m_UseWithSubtypes <- p'.m_UseWithSubtypes
-                    p.m_IsOfFixedSize <- p'.m_IsOfFixedSize
-                    p.m_IsRecursive <- p'.m_IsRecursive
                     p.m_Writer <- p'.m_Writer
                     p.m_Reader <- p'.m_Reader
                     p.m_NestedPickler <- p'.m_NestedPickler
                     p.m_SkipHeaderWrite <- p'.m_SkipHeaderWrite
                     p.m_Bypass <- p'.m_Bypass
                     p.m_SkipVisit <- p'.m_SkipVisit
-                    p.m_IsInitialized <- true
 
             | _ -> raise <| new PicklerGenerationException(p.Type, sprintf "source pickler is of invalid type (%O)." p'.Type)
 
@@ -220,7 +218,6 @@
                                 formatter.EndWriteObject ()
 
                             objStack.Pop () |> ignore
-                            cyclicObjects.Remove id |> ignore
                         else
                             if p.m_SkipHeaderWrite then
                                 p.m_Writer state tag value
@@ -339,10 +336,4 @@
         /// <param name="skipVisit">do not apply visitor to instances if specified.</param>
         static member Create<'T>(reader, writer, picklerInfo, cacheByRef : bool, ?useWithSubtypes : bool, ?skipHeaderWrite : bool, ?bypass : bool, ?skipVisit : bool) =
             new CompositePickler<'T>(reader, writer, picklerInfo, cacheByRef = cacheByRef, ?useWithSubtypes = useWithSubtypes, 
-                                                        ?skipHeaderWrite = skipHeaderWrite, ?bypass = bypass, ?skipVisit = skipVisit) :> Pickler<'T>
-
-        static member ObjectPickler =
-            let cp = new CompositePickler<obj>((fun _ _ -> obj ()), (fun _ _ _ -> ()), PicklerInfo.Object, cacheByRef = true)
-            cp.SetIsOfFixedSize false
-            cp.SetIsRecursiveType true
-            cp :> Pickler<obj>
+                                                ?skipHeaderWrite = skipHeaderWrite, ?bypass = bypass, ?skipVisit = skipVisit) :> Pickler<'T>

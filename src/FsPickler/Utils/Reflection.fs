@@ -92,6 +92,10 @@
 
     let isISerializable (t : Type) = isAssignableFrom typeof<ISerializable> t
 
+    let (|GenericType|_|) (t : Type) =
+        if t.IsGenericType then Some <| t.GetGenericTypeDefinition()
+        else None
+
     /// returns all methods of type `StreamingContext -> unit` and given Attribute
     let getSerializationMethods<'Attr when 'Attr :> Attribute> (ms : MethodInfo []) =
         let isSerializationMethod(m : MethodInfo) =

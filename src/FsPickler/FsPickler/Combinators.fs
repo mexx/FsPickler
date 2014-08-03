@@ -83,7 +83,7 @@
         let bigint = PrimitivePicklers.mkBigInt ()
 
         /// the default System.Object pickler
-        let obj = CompositePickler.ObjectPickler
+        let obj = FsPickler.GeneratePickler<obj> ()
 
         /// auto generate a pickler
         let auto<'T> = FsPickler.GeneratePickler<'T> ()
@@ -136,14 +136,14 @@
         let fix (F : Pickler<'T> -> Pickler<'T>) =
             let f = new CompositePickler<'T> ()
             let f' = F f
-            f.InitializeFrom f' ; f :> Pickler<'T>
+            f.InitializeFrom(f', true, false) ; f :> Pickler<'T>
 
         /// pickler fixpoint combinator
         let fix2 (F : Pickler<'T> -> Pickler<'S> -> Pickler<'T> * Pickler<'S>) =
             let f = new CompositePickler<'T> ()
             let g = new CompositePickler<'S> ()
             let f',g' = F f g
-            f.InitializeFrom f' ; g.InitializeFrom g'
+            f.InitializeFrom(f', true, false) ; g.InitializeFrom(g', true, false)
             f :> Pickler<'T>, g :> Pickler<'S>
 
         /// pickler fixpoint combinator
@@ -152,7 +152,8 @@
             let g = new CompositePickler<'S> ()
             let h = new CompositePickler<'U> ()
             let f',g',h' = F f g h
-            f.InitializeFrom f' ; g.InitializeFrom g' ; h.InitializeFrom h'
+            f.InitializeFrom(f', true, false) ; g.InitializeFrom (g', true, false) ; 
+            h.InitializeFrom(h', true, false)
             f :> Pickler<'T>, g :> Pickler<'S>, h :> Pickler<'U>
 
         /// Experimental support for n-way product types such as records.

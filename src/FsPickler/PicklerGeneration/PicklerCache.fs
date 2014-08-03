@@ -19,8 +19,7 @@
         static let instance = lazy(new PicklerCache())
 
         let basePicklers =
-            seq {  
-                yield CompositePickler.ObjectPickler :> Pickler
+            seq {
                 yield! PrimitivePicklers.mkAll ()
                 yield! mkReflectionPicklers <| ArrayPickler.GetInterface()
             } |> Seq.map (fun p -> KeyValuePair(p.Type, Success p))

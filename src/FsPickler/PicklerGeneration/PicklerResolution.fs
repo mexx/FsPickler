@@ -123,10 +123,10 @@
                             try TypeShape.resolve t
                             with UnSupportedShape -> raise <| NonSerializableTypeException(t)
 
-                        let p0 = shape.Accept { new ITypeVisitor<Pickler> with member __.Visit<'T> () = new CompositePickler<'T> () :> Pickler }
+                        let p0 = UninitializedPickler.Create shape
                         do stack.Push p0
 
-                        let generatedPickler = buildPickler resolver shape
+                        let generatedPickler = PicklerFactory.Create resolver shape
 
                         let _,tree = stack.Pop ()
 
@@ -140,9 +140,7 @@
                                     member __.Apply<'T> (p : Pickler<'T>) =
                                         match p with
                                         | :? CompositePickler<'T> as p -> 
-                                            p.InitializeFrom generatedPickler ; 
-                                            p.SetIsOfFixedSize isFixed
-                                            p.SetIsRecursiveType isRec
+                                            p.InitializeFrom(generatedPickler, isRec, isFixed)
                                             true
                                         | _ -> 
                                             let msg = sprintf "Unexpected pickler implementation '%O'" <| p.GetType()

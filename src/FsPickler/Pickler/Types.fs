@@ -28,16 +28,15 @@
 
     type PicklerInfo =
         | Primitive             = 0uy
-        | Object                = 1uy
-        | ReflectionType        = 2uy
-        | FieldSerialization    = 3uy
-        | DataContract          = 4uy
-        | ISerializable         = 5uy
-        | Array                 = 6uy
-        | FSharpValue           = 7uy // tuples, records and DUs
-        | Delegate              = 8uy
-        | Combinator            = 9uy
-        | UserDefined           = 10uy
+        | ReflectionType        = 1uy
+        | FieldSerialization    = 2uy
+        | DataContract          = 3uy
+        | ISerializable         = 4uy
+        | Array                 = 5uy
+        | FSharpValue           = 6uy // tuples, records and DUs
+        | Delegate              = 7uy
+        | Combinator            = 8uy
+        | UserDefined           = 9uy
 
     /// Specifies runtime properties of serialized objects.
 
